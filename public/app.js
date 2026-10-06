@@ -50,7 +50,7 @@ zone.addEventListener("drop", (e) => {
   const f = e.dataTransfer?.files?.[0];
   if (f) send(f);
 });
-$("sample").addEventListener("click", () => run(() => fetch("/api/read"), "Opening the sample invoice"));
+$("try-sample").addEventListener("click", () => run(() => fetch("/api/read"), "Opening the sample invoice"));
 
 /**
  * Phone photos run 3 to 12 MB and far more pixels than a model needs to read
@@ -91,7 +91,7 @@ async function run(request, label) {
   const box = $("result");
   box.hidden = false;
   box.innerHTML = `<div class="working"><span class="spin"></span><span>${esc(label)}. Usually about thirty seconds.</span><span class="secs" id="secs">0 s</span></div>`;
-  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (location.hash !== "#sample") box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   const started = Date.now();
   const tick = setInterval(() => { const s = $("secs"); if (s) s.textContent = `${Math.round((Date.now() - started) / 1000)} s`; }, 500);
   try {
@@ -189,3 +189,7 @@ function show(r) {
 }
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// invoices.tasti.io/#sample opens straight onto the sample, for links in emails
+// where the reader has no invoice to hand.
+if (location.hash === "#sample") run(() => fetch("/api/read"), "Opening the sample invoice");
