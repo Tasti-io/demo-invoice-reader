@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "invoice-reader", "runtimeExecutable": "node", "runtimeArgs": ["scripts/dev.mjs"], "port": 3030 }
+  ]
+}

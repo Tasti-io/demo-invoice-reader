@@ -1,0 +1,11 @@
+{
+  "name": "tasti-demo-invoice-reader",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Public demo: drop in one supplier invoice, get your own lines back with a price per kilogram beside each.",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "check": "node scripts/selftest.mjs"
+  }
+}

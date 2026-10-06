@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice reader · a working demo by Tasti.io</title>
+<meta name="description" content="Drop in one supplier invoice. Get your own lines back with a price per kilogram beside each, worked out in arithmetic you can check. Nothing is kept.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --ink:#1B1A18;--mid:#57534E;--faint:#8A857D;--rule:#E5E1D8;
+    --paper:#FFFFFF;--canvas:#F3F1EC;--teal:#0F8A7A;--warn:#B4541F;
+  }
+  body{font-family:'DM Sans',system-ui,sans-serif;background:var(--canvas);color:var(--ink);
+       padding:28px 16px 72px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto}
+
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;
+           text-transform:uppercase;color:var(--teal);margin-bottom:9px}
+  h1{font-family:'DM Serif Display',Georgia,serif;font-size:clamp(27px,3.6vw,40px);line-height:1.12;margin-bottom:9px}
+  .sub{font-size:15px;line-height:23px;color:var(--mid);max-width:66ch}
+
+  .tabs{display:flex;gap:4px;margin:22px 0 0;border-bottom:1px solid var(--rule)}
+  .tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+       font:inherit;font-size:14px;font-weight:500;color:var(--faint);padding:9px 14px;cursor:pointer;border-radius:6px 6px 0 0}
+  .tab:hover{color:var(--ink)}
+  .tab.is-on{color:var(--ink);border-bottom-color:var(--teal)}
+  .tab:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+
+  .card{background:var(--paper);border:1px solid var(--rule);border-radius:10px;overflow:hidden;margin-top:22px}
+  .card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+             padding:14px 18px;border-bottom:1px solid var(--rule)}
+  .card-head h2{font-family:'DM Serif Display',Georgia,serif;font-size:17px;font-weight:400}
+  .stamp{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.07em;color:var(--faint)}
+
+  .drop{display:grid;grid-template-columns:1.25fr 1fr;gap:0}
+  .zone{display:block;margin:18px;border:1.5px dashed #CFC9BE;border-radius:9px;background:#FCFBF8;padding:30px 20px;
+        text-align:center;cursor:pointer;transition:border-color .12s ease,background .12s ease}
+  .zone:hover,.zone.is-over{border-color:var(--teal);background:#F4FAF8}
+  .zone:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .zone .big{font-family:'DM Serif Display',Georgia,serif;font-size:20px;margin-bottom:6px}
+  .zone .small{font-size:13.5px;color:var(--mid);line-height:20px}
+  .zone .types{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;color:var(--faint);margin-top:12px}
+  .zone input{display:none}
+  .or{margin:-4px 18px 18px;font-size:13.5px;color:var(--mid)}
+
+  .kept{border-left:1px solid var(--rule);padding:20px 20px 20px 22px;font-size:13.5px;line-height:21px;color:var(--mid)}
+  .kept h3{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+           color:var(--teal);font-weight:500;margin-bottom:8px}
+  .kept p{margin-bottom:9px}
+  .kept b{color:var(--ink);font-weight:500}
+
+  .linkish{appearance:none;background:none;border:0;padding:0;font:inherit;color:var(--teal);font-weight:500;
+           cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .linkish:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+  .working{padding:26px 18px;display:flex;gap:14px;align-items:center;font-size:14.5px;color:var(--mid)}
+  .spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--rule);border-top-color:var(--teal);
+        animation:spin .9s linear infinite;flex:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .secs{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--faint);margin-left:auto}
+
+  .notice{margin:16px 18px 0;background:#FDF8F4;border:1px solid var(--rule);border-left:2px solid var(--warn);
+          border-radius:0 7px 7px 0;padding:9px 12px;font-size:13.5px;line-height:20px;color:var(--mid)}
+  .notice b{color:var(--ink);font-weight:500}
+
+  .meta{display:flex;flex-wrap:wrap;gap:6px 22px;padding:14px 18px 0;font-size:13.5px;color:var(--mid)}
+  .meta b{color:var(--ink);font-weight:500}
+  .units{margin-left:auto;display:inline-flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden}
+  .units button{appearance:none;border:0;background:none;font:inherit;font-size:12.5px;color:var(--faint);padding:3px 10px;cursor:pointer}
+  .units button.is-on{background:#E6F4F1;color:var(--teal);font-weight:500}
+
+  .tablewrap{overflow-x:auto;margin-top:12px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;
+     color:var(--faint);text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);white-space:nowrap;background:#FAF8F3}
+  td{padding:9px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  th:first-child,td:first-child{padding-left:18px}
+  th:last-child,td:last-child{padding-right:18px}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .code{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--faint);white-space:nowrap}
+  .pack{color:var(--mid);white-space:nowrap}
+  .unit{font-weight:700;color:var(--ink)}
+  .work{display:block;font-size:11.5px;color:var(--faint);font-weight:400;margin-top:2px}
+
+  .check{margin:14px 18px 0;padding:10px 12px;border-radius:7px;font-size:13.5px;line-height:20px}
+  .check.ok{background:#F1F8F6;color:#1E5E55}
+  .check.bad{background:#FDF0E8;color:var(--warn)}
+  .check.none{background:#F7F5F0;color:var(--mid)}
+
+  .aside{margin:18px 18px 18px;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+  .aside-head{background:#FAF8F3;padding:9px 12px;font-size:13px;color:var(--mid);border-bottom:1px solid var(--rule)}
+  .aside-head b{color:var(--ink);font-weight:500}
+  .aside-row{display:flex;justify-content:space-between;gap:14px;padding:9px 12px;border-bottom:1px solid var(--rule);font-size:13.5px}
+  .aside-row:last-child{border-bottom:0}
+  .aside-row .why{color:var(--warn);font-size:12.5px;text-align:right;max-width:46%}
+  .empty-aside{padding:10px 12px;font-size:13px;color:var(--faint)}
+
+  .again{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:0 18px 18px;font-size:13.5px;color:var(--mid)}
+  .btn{appearance:none;font:inherit;font-size:14px;font-weight:500;border-radius:8px;padding:8px 15px;cursor:pointer;
+       border:1px solid var(--rule);background:none;color:var(--mid)}
+  .btn:hover{color:var(--ink);border-color:var(--faint)}
+  .btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+  .prose{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:26px 30px 30px;margin-top:22px}
+  .prose h2{font-family:'DM Serif Display',Georgia,serif;font-size:21px;font-weight:400;margin:30px 0 9px}
+  .prose h2:first-child{margin-top:0}
+  .prose p{font-size:15px;line-height:25px;color:var(--mid);max-width:68ch;margin-bottom:11px}
+  .prose p b{color:var(--ink)}
+  .prose .cta a{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--teal);text-decoration:none;
+                border-bottom:1px solid var(--teal)}
+
+  footer{margin-top:26px;font-size:13px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18px}
+  footer a{color:var(--teal);text-decoration:none;font-weight:500}
+
+  @media(max-width:760px){
+    .drop{grid-template-columns:1fr}
+    .kept{border-left:0;border-top:1px solid var(--rule)}
+    .prose{padding:20px 18px 24px}
+    .hide-sm{display:none}
+    .aside-row{flex-direction:column;gap:3px}
+    .aside-row .why{text-align:left;max-width:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">A working demo &middot; Tasti.io</div>
+  <h1>The invoice reader</h1>
+  <p class="sub">
+    Drop in one supplier invoice, a PDF or a photo of the page. In about thirty seconds you get your
+    own lines back with a price per kilogram beside each, worked out in plain arithmetic you can check
+    against the paper. Anything it cannot price honestly is set aside where you can see it.
+  </p>
+
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab is-on" role="tab" id="tab-read" aria-controls="panel-read" aria-selected="true">Read an invoice</button>
+    <button class="tab" role="tab" id="tab-how" aria-controls="panel-how" aria-selected="false" tabindex="-1">How it works</button>
+  </div>
+
+  <div id="panel-read" role="tabpanel" aria-labelledby="tab-read">
+
+    <div class="card" id="start">
+      <div class="drop">
+        <div>
+          <label class="zone" id="zone" tabindex="0">
+            <input type="file" id="file" accept="application/pdf,image/jpeg,image/png,image/webp,image/heic,image/*">
+            <div class="big">Drop an invoice here</div>
+            <div class="small">or tap to choose one. On a phone you can photograph the page.</div>
+            <div class="types">PDF, JPG, PNG &middot; up to 4 MB &middot; up to 6 pages</div>
+          </label>
+          <p class="or">No invoice to hand? <button class="linkish" id="sample">See it on a sample invoice</button></p>
+        </div>
+        <div class="kept">
+          <h3>Nothing is kept</h3>
+          <p>
+            Your file is held in memory for one request, sent once to Anthropic's API to be transcribed,
+            and dropped when the answer comes back. <b>No copy is written anywhere</b>: no database, no
+            storage, no log of what was on the page.
+          </p>
+          <p>
+            Under Anthropic's commercial terms, what is sent through the API is not used to train models.
+            Nothing here asks who you are.
+          </p>
+          <p>Still, cover anything you would rather not send. Prices and pack sizes are all it needs.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="result" hidden></div>
+
+  </div>
+
+  <div id="panel-how" role="tabpanel" aria-labelledby="tab-how" hidden>
+    <div class="prose">
+      <h2>Why a price per kilogram</h2>
+      <p>
+        An invoice tells you what a case cost. It does not tell you what the thing inside cost, and that
+        is the only number that compares. One supplier sells mozzarella as 5 x 2.5 kg, another as a
+        25 lb case, a third by the bag. Until each becomes a price per kilogram, nobody can say which is
+        cheaper or whether last month's was, and so in practice nobody does.
+      </p>
+
+      <h2>Where the model works, and where it does not</h2>
+      <p>
+        One model call, in one place: reading the page. Every distributor lays out an invoice
+        differently and changes it every few years, which is exactly what twenty years of OCR templates
+        were bad at and what a model reads well.
+      </p>
+      <p>
+        <b>The model transcribes. It never calculates.</b> It is asked for every amount as the text
+        printed on the page. From there it is ordinary code: the pack size is parsed, pounds and ounces
+        become kilograms, the line total is divided by the quantity, and the lines are added up and
+        compared to the invoice's own subtotal. A model asked to produce the final figure would simply be
+        believed. Code that does the arithmetic can be checked, and the check is on the page.
+      </p>
+
+      <h2>What gets set aside</h2>
+      <p>
+        A line with no pack size printed has nothing to divide by, so it gets no price. Neither does a
+        pack described as "box", a credit, or a line that works out to a figure no food costs, which
+        almost always means a misread digit. Each one is listed with the reason, below the prices, and
+        none of them is folded into a number.
+      </p>
+      <p>
+        If the lines do not add up to the subtotal printed on the invoice, the page says so in orange.
+        Either a digit was misread or the supplier's own arithmetic is off. Both are worth knowing before
+        trusting anything else on the page.
+      </p>
+
+      <h2>What is real here and what is not</h2>
+      <p>
+        When you upload a file, the reading is real and so is every number. When the demo is switched
+        off, has used its budget for the day, or cannot read your file, it shows a sample invoice instead
+        and says so at the top in plain words. The sample is a document we typed in for a fictional
+        group called Harbour &amp; Co. It goes through exactly the same arithmetic, but it is not yours,
+        and the page never pretends otherwise.
+      </p>
+
+      <h2>What this is the first step of</h2>
+      <p>
+        One invoice gives you prices. Twelve weeks of them give you movement: the cheese that crept up
+        6% while the pizza price stayed where it was in February, or the same chicken bought from two
+        suppliers at two prices in the same month. That is what the
+        <a href="https://morning-sheet.tasti.io" style="color:var(--teal)">morning sheet</a> does with
+        invoices forwarded from an inbox, and it starts with exactly this read.
+      </p>
+
+      <h2>Where to start</h2>
+      <p>
+        With one question: <b>do you know what you paid per kilogram for your three biggest ingredients
+        last month, from each supplier?</b> If the answer involves a spreadsheet somebody updates when
+        they remember, that is usually a twenty minute conversation.
+      </p>
+      <p class="cta"><a href="mailto:yuriy@tasti.io?subject=Invoice%20reader">yuriy@tasti.io</a></p>
+
+      <h2>Who built it</h2>
+      <p>
+        Yuriy Romanyuk, in Vancouver. I ran restaurant operations before I built software for them, which
+        is why this reads one invoice properly instead of promising to read all of them.
+      </p>
+    </div>
+  </div>
+
+  <footer>
+    <span>Built by Yuriy Romanyuk</span>
+    <a href="https://www.tasti.io">tasti.io</a>
+    <a href="https://demo.tasti.io">all demos</a>
+    <a href="mailto:yuriy@tasti.io">yuriy@tasti.io</a>
+  </footer>
+</div>
+
+<script type="module" src="/app.js"></script>
+</body>
+</html>
