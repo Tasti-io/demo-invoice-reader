@@ -157,8 +157,8 @@ check("a key with an invisible passenger is cleaned", cleanKey("sk-ant-abc​ ")
 console.log("\nthe words");
 const page = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
 const app = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
-check("no em dashes on the page", !page.includes("—") && !app.includes("—"));
-check("no em dashes in anything the API can say", !src.includes("—"));
+check("no em dashes on the page", !page.includes("\u2014") && !app.includes("\u2014"));
+check("no em dashes in anything the API can say", !src.includes("\u2014"));
 check("the page says nothing is kept", /nothing is (kept|stored|saved)/i.test(page));
 
 console.log(failed ? `\n${failed} failure(s)` : "\nall passed");
